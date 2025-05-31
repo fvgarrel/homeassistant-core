@@ -131,6 +131,11 @@
       "paperless_update": {
         "name": "Software"
       }
+    },
+    "todo": {
+      "documents_inbox_todo": {
+        "name": "Document inbox"
+      }
     }
   },
   "exceptions": {

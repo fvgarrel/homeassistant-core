@@ -14,7 +14,7 @@ from pypaperless.exceptions import (
     PaperlessInactiveOrDeletedError,
     PaperlessInvalidTokenError,
 )
-from pypaperless.models import Statistic, Status
+from pypaperless.models import Document, Statistic, Status
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -27,6 +27,7 @@ type PaperlessConfigEntry = ConfigEntry[PaperlessData]
 
 TData = TypeVar("TData")
 
+UPDATE_INTERVAL_INBOX = timedelta(seconds=10)
 UPDATE_INTERVAL_STATISTICS = timedelta(seconds=120)
 UPDATE_INTERVAL_STATUS = timedelta(seconds=300)
 
@@ -37,6 +38,15 @@ class PaperlessData:
 
     statistics: PaperlessStatisticCoordinator
     status: PaperlessStatusCoordinator
+    inbox: PaperlessInboxCoordinator
+
+
+@dataclass
+class InboxData:
+    """Data for the Paperless-ngx inbox platform."""
+
+    inbox_tag_ids: list[int]
+    documents: list[Document]
 
 
 class PaperlessCoordinator(DataUpdateCoordinator[TData]):
@@ -137,3 +147,47 @@ class PaperlessStatusCoordinator(PaperlessCoordinator[Status]):
     async def _async_update_data_internal(self) -> Status:
         """Fetch status data from API endpoint."""
         return await self.api.status()
+
+
+class PaperlessInboxCoordinator(PaperlessCoordinator[InboxData | None]):
+    """Coordinator to manage Paperless-ngx inbox updates."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: PaperlessConfigEntry,
+        api: Paperless,
+    ) -> None:
+        """Initialize Paperless-ngx inbox coordinator."""
+        super().__init__(
+            hass,
+            entry,
+            api,
+            name="Inbox Coordinator",
+            update_interval=UPDATE_INTERVAL_INBOX,
+        )
+
+    async def _async_update_data_internal(self) -> InboxData | None:
+        """Fetch inbox data from API endpoint."""
+
+        inbox_tags = (await self.api.statistics()).inbox_tags
+
+        if not inbox_tags:
+            return None
+
+        inbox_data = InboxData(
+            inbox_tag_ids=inbox_tags,
+            documents=[],
+        )
+
+        filters = {
+            "tags__id__in": ",".join(
+                str(tag_id) for tag_id in inbox_data.inbox_tag_ids
+            ),
+            "ordering": "added",
+        }
+
+        async with self.api.documents.reduce(**filters) as filtered:
+            inbox_data.documents.extend([item async for item in filtered])
+
+        return inbox_data

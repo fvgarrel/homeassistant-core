@@ -22,11 +22,12 @@ from .const import DOMAIN, LOGGER
 from .coordinator import (
     PaperlessConfigEntry,
     PaperlessData,
+    PaperlessInboxCoordinator,
     PaperlessStatisticCoordinator,
     PaperlessStatusCoordinator,
 )
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.UPDATE]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TODO, Platform.UPDATE]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -> bool:
@@ -36,8 +37,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
 
     statistics_coordinator = PaperlessStatisticCoordinator(hass, entry, api)
     status_coordinator = PaperlessStatusCoordinator(hass, entry, api)
+    inbox_coordinator = PaperlessInboxCoordinator(hass, entry, api)
 
     await statistics_coordinator.async_config_entry_first_refresh()
+    await inbox_coordinator.async_config_entry_first_refresh()
 
     try:
         await status_coordinator.async_config_entry_first_refresh()
@@ -48,6 +51,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
     entry.runtime_data = PaperlessData(
         status=status_coordinator,
         statistics=statistics_coordinator,
+        inbox=inbox_coordinator,
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
