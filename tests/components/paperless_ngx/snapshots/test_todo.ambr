@@ -1,0 +1,20 @@
+# serializer version: 1
+# name: test_todo_platform
+  list([
+    dict({
+      'status': 'needs_action',
+      'summary': 'Electricity Bill',
+      'uid': '1',
+    }),
+    dict({
+      'status': 'needs_action',
+      'summary': 'Insurance',
+      'uid': '2',
+    }),
+    dict({
+      'status': 'needs_action',
+      'summary': 'Test Document',
+      'uid': '3',
+    }),
+  ])
+# ---

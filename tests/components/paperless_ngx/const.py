@@ -13,3 +13,5 @@ USER_INPUT_TWO = {
 }
 
 USER_INPUT_REAUTH = {CONF_API_KEY: "192837465"}
+
+ENTITY_ID_TODO = "todo.paperless_ngx_document_inbox"

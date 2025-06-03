@@ -11,6 +11,7 @@ from homeassistant.components.todo import (
     TodoListEntityFeature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -44,7 +45,7 @@ class InboxDocuments(TodoListEntity, PaperlessEntity[PaperlessInboxCoordinator])
 
     @property
     def todo_items(self) -> list[TodoItem] | None:
-        """Get the current set of inbox documents."""
+        """Get the current inbox documents."""
         if self.coordinator.data is None:
             return None
 
@@ -53,7 +54,6 @@ class InboxDocuments(TodoListEntity, PaperlessEntity[PaperlessInboxCoordinator])
                 summary=item.title,
                 uid=str(item.id),
                 status=TodoItemStatus.NEEDS_ACTION,
-                due=item.created_date,
             )
             for item in self.coordinator.data.documents
         ]
@@ -61,15 +61,20 @@ class InboxDocuments(TodoListEntity, PaperlessEntity[PaperlessInboxCoordinator])
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update an item in the To-do list."""
         if not self.coordinator.data or not item.uid:
-            return
+            raise ServiceValidationError(
+                "No inbox data available or item ID not given."
+            )
 
         document = await self.coordinator.api.documents(int(item.uid))
         document.title = item.summary
 
+        # remove the inbox tags from the document if it is completed
         if item.status == TodoItemStatus.COMPLETED and document.tags:
             for tag_id in self.coordinator.data.inbox_tag_ids:
                 if tag_id in document.tags:
                     document.tags.remove(tag_id)
 
+        # save changed in paperless
         await document.update()
+
         await self.coordinator.async_refresh()

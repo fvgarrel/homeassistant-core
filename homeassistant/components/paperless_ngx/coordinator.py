@@ -27,7 +27,7 @@ type PaperlessConfigEntry = ConfigEntry[PaperlessData]
 
 TData = TypeVar("TData")
 
-UPDATE_INTERVAL_INBOX = timedelta(seconds=10)
+UPDATE_INTERVAL_INBOX = timedelta(seconds=120)
 UPDATE_INTERVAL_STATISTICS = timedelta(seconds=120)
 UPDATE_INTERVAL_STATUS = timedelta(seconds=300)
 
