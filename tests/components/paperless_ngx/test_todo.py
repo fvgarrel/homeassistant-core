@@ -50,7 +50,7 @@ async def test_paperless_inbox_tags(
     state = hass.states.get(ENTITY_ID_TODO)
     assert state.state == "3"
 
-    # update to none inbox tags
+    # none inbox tags
     mock_statistic_data_update["inbox_tags"] = None
     mock_paperless.statistics = AsyncMock(
         return_value=Statistic.create_with_data(
@@ -65,7 +65,7 @@ async def test_paperless_inbox_tags(
     state = hass.states.get(ENTITY_ID_TODO)
     assert state.state == STATE_UNKNOWN
 
-    # update to empty inbox tags
+    # empty inbox tags
     mock_statistic_data_update["inbox_tags"] = []
     mock_paperless.statistics = AsyncMock(
         return_value=Statistic.create_with_data(
@@ -80,7 +80,7 @@ async def test_paperless_inbox_tags(
     state = hass.states.get(ENTITY_ID_TODO)
     assert state.state == STATE_UNKNOWN
 
-    # update available inbox tags
+    # available inbox tags
     mock_statistic_data_update["inbox_tags"] = [1, 2]
     mock_paperless.statistics = AsyncMock(
         return_value=Statistic.create_with_data(
