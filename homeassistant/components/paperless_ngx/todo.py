@@ -1,4 +1,4 @@
-"""Definition of Picnic shopping cart."""
+"""Todo platform for Paperless-ngx."""
 
 from __future__ import annotations
 

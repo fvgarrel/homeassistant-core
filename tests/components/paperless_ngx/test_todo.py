@@ -7,9 +7,10 @@ from pypaperless.models import Document, Statistic
 import pytest
 
 from homeassistant.components.paperless_ngx.coordinator import UPDATE_INTERVAL_INBOX
-from homeassistant.components.todo import TodoServices
+from homeassistant.components.todo import DATA_COMPONENT, TodoItem, TodoServices
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.llm import TODO_DOMAIN
 
 from . import setup_integration
@@ -135,3 +136,27 @@ async def test_paperless_inbox_update(
 
     # inbox tag should be removed
     assert mock_document.tags == [1, 2]
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_update_todo_item_without_uid(hass: HomeAssistant) -> None:
+    """Test updating a todo item without uid raises ServiceValidationError."""
+
+    component = hass.data[DATA_COMPONENT]
+    entity = component.get_entity(ENTITY_ID_TODO)
+
+    with pytest.raises(ServiceValidationError):
+        await entity.async_update_todo_item(TodoItem(uid="", summary="Test Title"))
+
+
+@pytest.mark.usefixtures("init_integration")
+async def test_update_todo_item_without_data(hass: HomeAssistant) -> None:
+    """Test updating a todo item without coordinator data raises ServiceValidationError."""
+
+    component = hass.data[DATA_COMPONENT]
+    entity = component.get_entity(ENTITY_ID_TODO)
+
+    entity.coordinator.data = None
+
+    with pytest.raises(ServiceValidationError):
+        await entity.async_update_todo_item(TodoItem(uid="1", summary="Test Title"))
