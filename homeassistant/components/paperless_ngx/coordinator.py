@@ -5,7 +5,6 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import TypeVar
 
 from pypaperless import Paperless
 from pypaperless.exceptions import (
@@ -24,8 +23,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import DOMAIN, LOGGER
 
 type PaperlessConfigEntry = ConfigEntry[PaperlessData]
-
-TData = TypeVar("TData")
 
 UPDATE_INTERVAL_INBOX = timedelta(seconds=120)
 UPDATE_INTERVAL_STATISTICS = timedelta(seconds=120)
@@ -49,7 +46,7 @@ class InboxData:
     documents: list[Document]
 
 
-class PaperlessCoordinator(DataUpdateCoordinator[TData]):
+class PaperlessCoordinator[DataT](DataUpdateCoordinator[DataT]):
     """Coordinator to manage fetching Paperless-ngx API."""
 
     config_entry: PaperlessConfigEntry
@@ -73,7 +70,7 @@ class PaperlessCoordinator(DataUpdateCoordinator[TData]):
             update_interval=update_interval,
         )
 
-    async def _async_update_data(self) -> TData:
+    async def _async_update_data(self) -> DataT:
         """Update data via internal method."""
         try:
             return await self._async_update_data_internal()
@@ -99,7 +96,7 @@ class PaperlessCoordinator(DataUpdateCoordinator[TData]):
             ) from err
 
     @abstractmethod
-    async def _async_update_data_internal(self) -> TData:
+    async def _async_update_data_internal(self) -> DataT:
         """Update data via paperless-ngx API."""
 
 

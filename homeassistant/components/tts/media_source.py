@@ -40,7 +40,7 @@ def generate_media_source_id(
     cache: bool | None = None,
 ) -> str:
     """Generate a media source ID for text-to-speech."""
-    from . import async_resolve_engine  # pylint: disable=import-outside-toplevel
+    from . import async_resolve_engine  # noqa: PLC0415
 
     if (engine := async_resolve_engine(hass, engine)) is None:
         raise HomeAssistantError("Invalid TTS provider selected")
@@ -193,7 +193,7 @@ class TTSMediaSource(MediaSource):
     @callback
     def _engine_item(self, engine: str, params: str | None = None) -> BrowseMediaSource:
         """Return provider item."""
-        from . import TextToSpeechEntity  # pylint: disable=import-outside-toplevel
+        from . import TextToSpeechEntity  # noqa: PLC0415
 
         if (engine_instance := get_engine_instance(self.hass, engine)) is None:
             raise BrowseError("Unknown provider")
@@ -214,7 +214,7 @@ class TTSMediaSource(MediaSource):
             media_class=MediaClass.APP,
             media_content_type="provider",
             title=engine_instance.name,
-            thumbnail=f"https://brands.home-assistant.io/_/{engine_domain}/logo.png",
+            thumbnail=f"/api/brands/integration/{engine_domain}/logo.png",
             can_play=False,
             can_expand=True,
         )

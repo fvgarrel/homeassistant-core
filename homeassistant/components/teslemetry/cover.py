@@ -45,7 +45,7 @@ async def async_setup_entry(
         chain(
             (
                 TeslemetryVehiclePollingWindowEntity(vehicle, entry.runtime_data.scopes)
-                if vehicle.api.pre2021 or vehicle.firmware < "2024.26"
+                if vehicle.poll or vehicle.firmware < "2024.26"
                 else TeslemetryStreamingWindowEntity(vehicle, entry.runtime_data.scopes)
                 for vehicle in entry.runtime_data.vehicles
             ),
@@ -53,7 +53,7 @@ async def async_setup_entry(
                 TeslemetryVehiclePollingChargePortEntity(
                     vehicle, entry.runtime_data.scopes
                 )
-                if vehicle.api.pre2021 or vehicle.firmware < "2024.44.25"
+                if vehicle.poll or vehicle.firmware < "2024.44.25"
                 else TeslemetryStreamingChargePortEntity(
                     vehicle, entry.runtime_data.scopes
                 )
@@ -63,7 +63,7 @@ async def async_setup_entry(
                 TeslemetryVehiclePollingFrontTrunkEntity(
                     vehicle, entry.runtime_data.scopes
                 )
-                if vehicle.api.pre2021 or vehicle.firmware < "2024.26"
+                if vehicle.poll or vehicle.firmware < "2024.26"
                 else TeslemetryStreamingFrontTrunkEntity(
                     vehicle, entry.runtime_data.scopes
                 )
@@ -73,7 +73,7 @@ async def async_setup_entry(
                 TeslemetryVehiclePollingRearTrunkEntity(
                     vehicle, entry.runtime_data.scopes
                 )
-                if vehicle.api.pre2021 or vehicle.firmware < "2024.26"
+                if vehicle.poll or vehicle.firmware < "2024.26"
                 else TeslemetryStreamingRearTrunkEntity(
                     vehicle, entry.runtime_data.scopes
                 )
@@ -82,7 +82,8 @@ async def async_setup_entry(
             (
                 TeslemetrySunroofEntity(vehicle, entry.runtime_data.scopes)
                 for vehicle in entry.runtime_data.vehicles
-                if vehicle.coordinator.data.get("vehicle_config_sun_roof_installed")
+                if vehicle.poll
+                and vehicle.coordinator.data.get("vehicle_config_sun_roof_installed")
             ),
         )
     )
@@ -198,7 +199,7 @@ class TeslemetryStreamingWindowEntity(
                 f"Adding field {signal} to {self.vehicle.vin}",
             )
 
-    def _handle_stream_update(self, data) -> None:
+    def _handle_stream_update(self, data: dict[str, Any]) -> None:
         """Update the entity attributes."""
 
         change = False
@@ -441,6 +442,7 @@ class TeslemetryStreamingRearTrunkEntity(
         """Update the entity attributes."""
 
         self._attr_is_closed = None if value is None else not value
+        self.async_write_ha_state()
 
 
 class TeslemetrySunroofEntity(TeslemetryVehiclePollingEntity, CoverEntity):

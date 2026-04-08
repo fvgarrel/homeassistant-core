@@ -26,6 +26,7 @@ from homeassistant.exceptions import HomeAssistantError, PlatformNotReady
 from homeassistant.helpers import config_validation as cv, discovery
 from homeassistant.helpers.entity_component import EntityComponent, async_update_entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.service import async_get_all_descriptions
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
@@ -300,13 +301,15 @@ async def test_extract_from_service_no_group_expand(hass: HomeAssistant) -> None
     """Test not expanding a group."""
     component = EntityComponent(_LOGGER, DOMAIN, hass)
     await component.async_setup({})
-    await component.async_add_entities([MockEntity(entity_id="group.test_group")])
+    await component.async_add_entities([MockEntity(entity_id="test_domain.test_group")])
 
-    call = ServiceCall(hass, "test", "service", {"entity_id": ["group.test_group"]})
+    call = ServiceCall(
+        hass, "test", "service", {"entity_id": ["test_domain.test_group"]}
+    )
 
     extracted = await component.async_extract_from_service(call, expand_group=False)
     assert len(extracted) == 1
-    assert extracted[0].entity_id == "group.test_group"
+    assert extracted[0].entity_id == "test_domain.test_group"
 
 
 async def test_setup_dependencies_platform(hass: HomeAssistant) -> None:
@@ -511,7 +514,7 @@ async def test_register_entity_service(
     schema: dict | None,
     service_data: dict,
 ) -> None:
-    """Test registering an enttiy service and calling it."""
+    """Test registering an entity service and calling it."""
     entity = MockEntity(entity_id=f"{DOMAIN}.entity")
     calls = []
 
@@ -525,7 +528,16 @@ async def test_register_entity_service(
     await component.async_setup({})
     await component.async_add_entities([entity])
 
-    component.async_register_entity_service("hello", schema, "async_called_by_service")
+    component.async_register_entity_service(
+        "hello",
+        schema,
+        "async_called_by_service",
+        description_placeholders={"test_placeholder": "beer"},
+    )
+    descriptions = await async_get_all_descriptions(hass)
+    assert descriptions["test_domain"]["hello"]["description_placeholders"] == {
+        "test_placeholder": "beer"
+    }
 
     with pytest.raises(vol.Invalid):
         await hass.services.async_call(
@@ -560,11 +572,10 @@ async def test_register_entity_service(
 
 
 async def test_register_entity_service_non_entity_service_schema(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    hass: HomeAssistant,
 ) -> None:
     """Test attempting to register a service with a non entity service schema."""
     component = EntityComponent(_LOGGER, DOMAIN, hass)
-    expected_message = "registers an entity service with a non entity service schema"
 
     for idx, schema in enumerate(
         (
@@ -573,9 +584,12 @@ async def test_register_entity_service_non_entity_service_schema(
             vol.Any(vol.Schema({"some": str})),
         )
     ):
-        component.async_register_entity_service(f"hello_{idx}", schema, Mock())
-        assert expected_message in caplog.text
-        caplog.clear()
+        expected_message = (
+            f"The test_domain.hello_{idx} service registers "
+            "an entity service with a non entity service schema"
+        )
+        with pytest.raises(HomeAssistantError, match=expected_message):
+            component.async_register_entity_service(f"hello_{idx}", schema, Mock())
 
     for idx, schema in enumerate(
         (
@@ -585,7 +599,6 @@ async def test_register_entity_service_non_entity_service_schema(
         )
     ):
         component.async_register_entity_service(f"test_service_{idx}", schema, Mock())
-        assert expected_message not in caplog.text
 
 
 async def test_register_entity_service_response_data(hass: HomeAssistant) -> None:
@@ -683,40 +696,6 @@ async def test_register_entity_service_response_data_multiple_matches_raises(
     )
 
     with pytest.raises(RuntimeError, match="Something went wrong"):
-        await hass.services.async_call(
-            DOMAIN,
-            "hello",
-            service_data={"some": "data"},
-            target={"entity_id": [entity1.entity_id, entity2.entity_id]},
-            blocking=True,
-            return_response=True,
-        )
-
-
-async def test_legacy_register_entity_service_response_data_multiple_matches(
-    hass: HomeAssistant,
-) -> None:
-    """Test asking for legacy service response data but matching many entities."""
-    entity1 = MockEntity(entity_id=f"{DOMAIN}.entity1")
-    entity2 = MockEntity(entity_id=f"{DOMAIN}.entity2")
-
-    async def generate_response(
-        target: MockEntity, call: ServiceCall
-    ) -> ServiceResponse:
-        return {"response-key": "response-value"}
-
-    component = EntityComponent(_LOGGER, DOMAIN, hass)
-    await component.async_setup({})
-    await component.async_add_entities([entity1, entity2])
-
-    component.async_register_legacy_entity_service(
-        "hello",
-        {"some": str},
-        generate_response,
-        supports_response=SupportsResponse.ONLY,
-    )
-
-    with pytest.raises(HomeAssistantError, match="matched more than one entity"):
         await hass.services.async_call(
             DOMAIN,
             "hello",

@@ -89,6 +89,17 @@ class HomematicipHeatingGroup(HomematicipGenericEntity, ClimateEntity):
             self._simple_heating = self._first_radiator_thermostat
 
     @property
+    def available(self) -> bool:
+        """Heating group available.
+
+        A heating group must be available, and should not be affected by the
+        individual availability of group members.
+        This allows controlling the temperature even when individual group
+        members are not available.
+        """
+        return True
+
+    @property
     def device_info(self) -> DeviceInfo:
         """Return device specific attributes."""
         return DeviceInfo(
@@ -216,8 +227,6 @@ class HomematicipHeatingGroup(HomematicipGenericEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
-        if hvac_mode not in self.hvac_modes:
-            return
 
         if hvac_mode == HVACMode.AUTO:
             await self._device.set_control_mode_async(HMIP_AUTOMATIC_CM)

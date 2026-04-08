@@ -287,7 +287,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
 
         try:
             return self._get_remote() is not None
-        except (UnhandledResponse, AccessDenied):
+        except UnhandledResponse, AccessDenied:
             # We got a response so it's working.
             return True
 
@@ -346,7 +346,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
                 self.auth_failed = True
                 self._notify_reauth_callback()
                 raise
-            except (ConnectionClosed, OSError):
+            except ConnectionClosed, OSError:
                 pass
         return self._remote
 
@@ -370,7 +370,7 @@ class SamsungTVLegacyBridge(SamsungTVBridge):
                     if remote := self._get_remote():
                         remote.control(key)
                     break
-                except (ConnectionClosed, BrokenPipeError):
+                except ConnectionClosed, BrokenPipeError:
                     # BrokenPipe can occur when the commands is sent to fast
                     self._remote = None
         except (UnhandledResponse, AccessDenied) as err:
@@ -636,14 +636,21 @@ class SamsungTVWSBridge(
                 )
                 self._remote = None
             except ConnectionFailure as err:
-                LOGGER.warning(
-                    (
+                error_details = err.args[0]
+                if "ms.channel.timeOut" in (error_details := repr(err)):
+                    # The websocket was connected, but the TV is probably asleep
+                    LOGGER.debug(
+                        "Channel timeout occurred trying to get remote for %s: %s",
+                        self.host,
+                        error_details,
+                    )
+                else:
+                    LOGGER.warning(
                         "Unexpected ConnectionFailure trying to get remote for %s, "
-                        "please report this issue: %s"
-                    ),
-                    self.host,
-                    repr(err),
-                )
+                        "please report this issue: %s",
+                        self.host,
+                        error_details,
+                    )
                 self._remote = None
             except (WebSocketException, AsyncioTimeoutError, OSError) as err:
                 LOGGER.debug("Failed to get remote for %s: %s", self.host, repr(err))

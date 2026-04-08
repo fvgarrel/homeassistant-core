@@ -8,12 +8,13 @@ from renault_api.kamereon import schemas
 from syrupy.assertion import SnapshotAssertion
 
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
+from homeassistant.components.renault.const import DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from tests.common import load_fixture, snapshot_platform
+from tests.common import async_load_fixture, snapshot_platform
 
 pytestmark = pytest.mark.usefixtures("patch_renault_account", "patch_get_vehicles")
 
@@ -115,8 +116,8 @@ async def test_button_start_charge(
     with patch(
         "renault_api.renault_vehicle.RenaultVehicle.set_charge_start",
         return_value=(
-            schemas.KamereonVehicleHvacStartActionDataSchema.loads(
-                load_fixture("renault/action.set_charge_start.json")
+            schemas.KamereonVehicleChargingStartActionDataSchema.loads(
+                await async_load_fixture(hass, "action.set_charge_start.json", DOMAIN)
             )
         ),
     ) as mock_action:
@@ -124,7 +125,7 @@ async def test_button_start_charge(
             BUTTON_DOMAIN, SERVICE_PRESS, service_data=data, blocking=True
         )
     assert len(mock_action.mock_calls) == 1
-    assert mock_action.mock_calls[0][1] == ()
+    assert mock_action.mock_calls[0][1] == (None,)
 
 
 @pytest.mark.usefixtures("fixtures_with_data")
@@ -144,7 +145,7 @@ async def test_button_stop_charge(
         "renault_api.renault_vehicle.RenaultVehicle.set_charge_stop",
         return_value=(
             schemas.KamereonVehicleChargingStartActionDataSchema.loads(
-                load_fixture("renault/action.set_charge_stop.json")
+                await async_load_fixture(hass, "action.set_charge_stop.json", DOMAIN)
             )
         ),
     ) as mock_action:
@@ -172,7 +173,7 @@ async def test_button_start_air_conditioner(
         "renault_api.renault_vehicle.RenaultVehicle.set_ac_start",
         return_value=(
             schemas.KamereonVehicleHvacStartActionDataSchema.loads(
-                load_fixture("renault/action.set_ac_start.json")
+                await async_load_fixture(hass, "action.set_ac_start.json", DOMAIN)
             )
         ),
     ) as mock_action:
@@ -181,3 +182,49 @@ async def test_button_start_air_conditioner(
         )
     assert len(mock_action.mock_calls) == 1
     assert mock_action.mock_calls[0][1] == (21, None)
+
+
+@pytest.mark.usefixtures("fixtures_with_data")
+@pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
+async def test_button_sound_horn(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> None:
+    """Test that button invokes renault_api with correct data."""
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    data = {
+        ATTR_ENTITY_ID: "button.reg_zoe_40_sound_horn",
+    }
+
+    with patch(
+        "renault_api.renault_vehicle.RenaultVehicle.start_horn",
+    ) as mock_action:
+        await hass.services.async_call(
+            BUTTON_DOMAIN, SERVICE_PRESS, service_data=data, blocking=True
+        )
+    assert len(mock_action.mock_calls) == 1
+    assert mock_action.mock_calls[0][1] == ()
+
+
+@pytest.mark.usefixtures("fixtures_with_data")
+@pytest.mark.parametrize("vehicle_type", ["zoe_40"], indirect=True)
+async def test_button_flash_lights(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> None:
+    """Test that button invokes renault_api with correct data."""
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    data = {
+        ATTR_ENTITY_ID: "button.reg_zoe_40_flash_lights",
+    }
+
+    with patch(
+        "renault_api.renault_vehicle.RenaultVehicle.start_lights",
+    ) as mock_action:
+        await hass.services.async_call(
+            BUTTON_DOMAIN, SERVICE_PRESS, service_data=data, blocking=True
+        )
+    assert len(mock_action.mock_calls) == 1
+    assert mock_action.mock_calls[0][1] == ()
