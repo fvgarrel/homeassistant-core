@@ -150,6 +150,19 @@ async def test_update_todo_item_without_uid(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.usefixtures("init_integration")
+async def test_update_todo_item_with_invalid_uid(hass: HomeAssistant) -> None:
+    """Test updating a todo item with an invalid uid raises ServiceValidationError."""
+
+    component = hass.data[DATA_COMPONENT]
+    entity = component.get_entity(ENTITY_ID_TODO)
+
+    with pytest.raises(ServiceValidationError):
+        await entity.async_update_todo_item(
+            TodoItem(uid="invalid", summary="Test Title")
+        )
+
+
+@pytest.mark.usefixtures("init_integration")
 async def test_update_todo_item_without_data(hass: HomeAssistant) -> None:
     """Test updating a todo item without coordinator data raises ServiceValidationError."""
 

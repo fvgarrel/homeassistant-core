@@ -60,21 +60,25 @@ class InboxDocuments(TodoListEntity, PaperlessEntity[PaperlessInboxCoordinator])
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update an item in the To-do list."""
-        if not self.coordinator.data or not item.uid:
+
+        coordinator_data = self.coordinator.data
+        if coordinator_data is None or not item.uid:
             raise ServiceValidationError(
                 "No inbox data available or item ID not given."
             )
 
-        document = await self.coordinator.api.documents(int(item.uid))
+        try:
+            document_id = int(item.uid)
+        except ValueError as err:
+            raise ServiceValidationError("Item ID is not an integer.") from err
+
+        document = await self.coordinator.api.documents(document_id)
         document.title = item.summary
 
-        # remove the inbox tags from the document if it is completed
         if item.status == TodoItemStatus.COMPLETED and document.tags:
-            for tag_id in self.coordinator.data.inbox_tag_ids:
-                if tag_id in document.tags:
-                    document.tags.remove(tag_id)
+            inbox_tag_ids = set(coordinator_data.inbox_tag_ids)
+            document.tags = [tag for tag in document.tags if tag not in inbox_tag_ids]
 
-        # save changed in paperless
         await document.update()
 
         await self.coordinator.async_refresh()
